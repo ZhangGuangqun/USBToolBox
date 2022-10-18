@@ -8,19 +8,23 @@ on:
 jobs:
   macOS:
     name: Build macOS
-    runs-on: self-hosted
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
       # - name: Set up Python 3
       #   run: brew install python3
+      - name: Set up Python 3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
 
       - name: Install Python Dependencies
-        run: /Library/Frameworks/Python.framework/Versions/3.9/bin/pip3 install -r requirements.txt
+        run: |
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install pyinstaller
 
-      - name: Install Debug Dependencies
-        run: /Library/Frameworks/Python.framework/Versions/3.9/bin/pip3 install pyinstaller
       - name: Build for macOS
-        run: /Library/Frameworks/Python.framework/Versions/3.9/bin/pyinstaller spec/macOS.spec
+        run: pyinstaller spec/macOS.spec
 
       - name: Zip
         run: cd dist; zip macOS.zip macOS

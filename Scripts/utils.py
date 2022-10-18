@@ -144,7 +144,7 @@ class TUIMenu:
         self.loop = loop
         self.add_quit = add_quit
 
-        self.return_option = (["Q", "Quit"] if self.top_level else ["B", "Back"]) if self.add_quit else None
+        self.return_option = (["Q", "退出"] if self.top_level else ["B", "返回"]) if self.add_quit else None
 
     def add_menu_option(self, name: Union[str, Callable], description: Optional[list[str]] = None, function: Optional[Callable] = None, key: Optional[str] = None):
         if not key and not self.auto_number:

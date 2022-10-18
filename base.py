@@ -213,7 +213,7 @@ class BaseUSBMap:
                 self.print_devices(i, indentation + "  ")
 
     def discover_ports(self):
-        self.utils.head("Port Discovery")
+        self.utils.head("端口发现")
         print()
         dont_refresh = False
         if not self.controllers:
@@ -222,7 +222,7 @@ class BaseUSBMap:
             dont_refresh = True
         while True:
             # os.system("cls" if os.name == "nt" else "clear")
-            self.utils.head("Port Discovery")
+            self.utils.head("端口发现")
             print()
             if dont_refresh:
                 dont_refresh = False
@@ -232,8 +232,17 @@ class BaseUSBMap:
             self.print_controllers(self.controllers, colored=True)
 
             self.dump_historical()
-            print("\nB.  Back\n")
-            do_quit = self.utils.grab("Waiting 5 seconds: ", timeout=5)
+            # Plug in a USB device into each port. Wait for the listing to show your USB device before unplugging it and plugging it into another port.
+            # If on Windows, you only need to plug in 1 device to USB 3 ports (as companion detection should be working). If on macOS, you will have to plug in a USB 2 device and a USB 3 device into each USB 3 port.
+            # For old computers with OHCI/UHCI and EHCI controllers, you will need to plug in a mouse/keyboard to map the USB 1.1 personalities, as most USB 2 devices will end on the USB 2 personality.
+            print("\n将一个 USB 设备依次插入到每个口进行识别：插入一个口等待显示出 USB 设备并且为绿色后拔掉，再插入另外一个口\n")
+            if platform.system() == "Darwin":
+                print("在 macOS 上进行端口发现，对于 USB 3 的口，需要分别插入 USB 2 的设备和 USB 3 的设备各一次。\n")
+            else:
+                print("在 Windows 上进行端口发现，如果启用了关联发现（默认启用），对于 USB 3 的口，只需要插入一次设备（相对于在 macOS 上进行端口发现较简单）\n")
+            print("对于有老的 OHCI/UHCI 和 EHCI 的电脑，需要插入鼠标或者键盘去映射 USB 1.1 的特质，因为大多数 USB 2 的设备将是 USB 2 的特质。\n")
+            print("\nB.  返回（输入 B 后回车返回上一级）\n")
+            do_quit = self.utils.grab("等待 5 秒钟（每 5 秒刷新，插入 USB 设备后等待 5 秒钟）", timeout=5)
             if str(do_quit).lower() == "b":
                 break
 
@@ -286,7 +295,7 @@ class BaseUSBMap:
 
     def select_ports(self):
         if not self.controllers_historical:
-            utils.TUIMenu("Select Ports and Build Kext", "Select an option: ", in_between=["No ports! Use the discovery mode."], loop=True).start()
+            utils.TUIMenu("选择端口并构建 Kext", "选择一个选项: ", in_between=["没有端口，返回上级先进行发现端口."], loop=True).start()
             return
 
         selection_index = 1
@@ -307,7 +316,7 @@ class BaseUSBMap:
             for controller in self.controllers_historical:
                 controller["selected_count"] = sum(1 if port["selected"] else 0 for port in controller["ports"])
 
-            utils.header("Select Ports and Build Kext")
+            utils.header("选择端口并构建 Kext")
             print()
             for controller in self.controllers_historical:
                 port_count_str = f"{controller['selected_count']}/{len(controller['ports'])}"
@@ -331,7 +340,7 @@ class BaseUSBMap:
                         self.print_devices(device, indentation="      " + len(str(selection_index)) * " " * 2)
                 print()
 
-            print(f"Binding companions is currently {color('on').green if self.settings['auto_bind_companions'] else color('off').red}.\n")
+            print(f"关联发现模式当前： {color('开启').green if self.settings['auto_bind_companions'] else color('关闭').red}.\n")
 
             output_kext = None
             if self.settings["use_native"] and self.settings["use_legacy_native"]:
@@ -339,27 +348,27 @@ class BaseUSBMap:
             elif self.settings["use_native"]:
                 output_kext = "USBMap.kext"
             else:
-                output_kext = "UTBMap.kext (requires USBToolBox.kext)"
+                output_kext = "UTBMap.kext (需要 USBToolBox.kext)"
 
             print(
                 textwrap.dedent(
                     f"""\
-                K. Build {output_kext}
-                A. Select All
-                N. Select None
-                P. Enable All Populated Ports
-                D. Disable All Empty Ports
-                T. Show Types
+                K. 构建 {output_kext}
+                A. 选择所有
+                N. 都不选择
+                P. 启用所有发现的端口（上一步发现端口过程中，识别了的（变绿色）的端口）
+                D. 禁用所有空的端口（上一步发现端口过程中，未识别（没有变绿色）的端口）
+                T. 显示 USB 类型
 
-                B. Back
+                B. 返回
 
-                - Select ports to toggle with comma-delimited lists (eg. 1,2,3,4,5)
-                - Change types using this formula T:1,2,3,4,5:t where t is the type
-                - Set custom names using this formula C:1:Name - Name = None to clear"""
+                - 切换端口启用状态（[#]且为绿色表示启用，[]黑色表示禁用。输入端口前的数字进行回车来进行切换状态，可以输入多个，用英文逗号隔开，如 1,2,3,4,5）
+                - 改变端口类型（格式：T:1,2,3,4,5:t , 其中 t 是类型（如 USB 3 Type A 的口是 3，其他类型输入 T 回车查看），比如编号为 1 和编号 2 的口是 USB 3.0 的口，那么输入 T:1,2:3 后回车） 
+                - 设置自定义的名称（C:1:Name），其中 Name 是名称，将名称输入为 None 来清除设置"""
                 )
             )
 
-            output = input("Select an option: ")
+            output = input("选择一个选项: ")
             if not output:
                 continue
             elif output.upper() == "B":
@@ -512,16 +521,16 @@ class BaseUSBMap:
         response = None
         if empty_controllers:
             empty_menu = utils.TUIMenu(
-                "Selection Validation",
-                "Select an option: ",
-                in_between=["The following controllers have no enabled ports:", ""]
+                "选项核实",
+                "选择一个选项: ",
+                in_between=["下面的 controllers 没有启用的端口：", ""]
                 + [controller["name"] for controller in empty_controllers]
-                + ["Select whether to ignore these controllers and exclude them from the map, or disable all ports on these controllers."],
+                + ["选择是否忽略这些 controllers 并把它们排除在映射文件之外，或者禁用这些 controllers 上的所有端口。"],
                 add_quit=False,
                 return_number=True,
             )
-            empty_menu.add_menu_option("Ignore", key="I")
-            empty_menu.add_menu_option("Disable", key="D")
+            empty_menu.add_menu_option("忽略", key="I")
+            empty_menu.add_menu_option("禁用", key="D")
             response = empty_menu.start()
 
         model_identifier = None
@@ -547,7 +556,7 @@ class BaseUSBMap:
 
         menu = utils.TUIMenu("Building USBMap", "Select an option: ")
         menu.head()
-        print("Generating Info.plist...")
+        print("生成 Info.plist...")
         for controller in self.controllers_historical:
             if not any(i["selected"] for i in controller["ports"]) and ignore:
                 continue
@@ -631,13 +640,13 @@ class BaseUSBMap:
         write_path = shared.current_dir / Path(output_kext)
 
         if write_path.exists():
-            print("Removing existing kext...")
+            print("删除存在的 kext...")
             shutil.rmtree(write_path)
 
-        print("Writing kext and Info.plist...")
+        print("写文件 kext 和 Info.plist...")
         (write_path / Path("Contents")).mkdir(parents=True)
         plistlib.dump(template, (write_path / Path("Contents/Info.plist")).open("wb"), sort_keys=True)
-        print(f"Done. Saved to {write_path.resolve()}.\n")
+        print(f"完成. 已经保存到 {write_path.resolve()}.\n")
         menu.print_options()
 
         menu.select()
@@ -678,18 +687,18 @@ class BaseUSBMap:
     def monu(self):
         response = None
         while not (response and response == utils.TUIMenu.EXIT_MENU):
-            in_between = [("Saved Data: {}" + Colors.RESET.value).format(Colors.GREEN.value + "Loaded" if self.json_path.exists() else (Colors.RED.value + "None"))]
+            in_between = [("保存的数据: {}" + Colors.RESET.value).format(Colors.GREEN.value + "已加载" if self.json_path.exists() else (Colors.RED.value + "无"))]
 
-            menu = utils.TUIMenu(f"USBToolBox {shared.VERSION}", "Select an option: ", in_between=in_between, top_level=True)
+            menu = utils.TUIMenu(f"USBToolBox {shared.VERSION} ， 由 myitnote.com 汉化", "选择一个选项（输入每个选项前面的字母再按回车键）:", in_between=in_between, top_level=True)
 
             menu_options = [
                 # ["H", "Print Historical", self.print_historical],
-                ["D", "Discover Ports", self.discover_ports],
-                ["S", "Select Ports and Build Kext", self.select_ports],
-                ["C", "Change Settings", self.change_settings],
+                ["D", "发现端口（USB 映射（USB 定制），一般这是第一步要做的）", self.discover_ports],
+                ["S", "选择端口并构建 Kext 驱动（当做完发现 USB 端口那一步后，再选择这一项将 USB 映射文件导出）", self.select_ports],
+                ["C", "更改设置", self.change_settings],
             ]
             if self.json_path.exists():
-                menu_options.insert(0, ["P", "Delete Saved USB Data", self.remove_historical])
+                menu_options.insert(0, ["P", "删除已经保存的 USB 数据", self.remove_historical])
             for i in menu_options:
                 menu.add_menu_option(i[1], None, i[2], i[0])
 
